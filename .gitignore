@@ -1,0 +1,20 @@
+# Personal data and credentials
+/config/ai-config.json
+/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+.env.*
+!.env.example
+
+# Local runtime and test output
+/runtime/
+/node_modules/
+/test-results/
+*.log
+
+# Course submission materials are kept separately
+/docs/
+/videos/
+/manifest-sha256.txt

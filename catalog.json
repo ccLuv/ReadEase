@@ -1,0 +1,44 @@
+{
+  "books": [
+    {
+      "id": "slow-reading",
+      "title": "慢读的日常",
+      "author": "悦读轻阅创作组",
+      "category": "阅读生活",
+      "description": "把阅读重新放回日常。围绕注意力、摘录与重读的原创短篇示例，用于体验中文阅读和章节导航。",
+      "format": "TXT",
+      "file": "/samples/slow-reading.txt",
+      "license": "项目原创示例，允许学习、修改与演示；AI 辅助生成"
+    },
+    {
+      "id": "craft-software",
+      "title": "软件的手艺",
+      "author": "悦读轻阅创作组",
+      "category": "软件工程",
+      "description": "以电子阅读器为例，介绍需求边界、稳定定位和同步冲突。原创教学示例，适合测试长章节阅读。",
+      "format": "TXT",
+      "file": "/samples/craft-software.txt",
+      "license": "项目原创示例，允许学习、修改与演示；AI 辅助生成"
+    },
+    {
+      "id": "window-notes",
+      "title": "窗边札记",
+      "author": "悦读轻阅创作组",
+      "category": "散文随笔",
+      "description": "三个关于城市、季节与观察的原创片段。EPUB 示例包含元数据与章节顺序。",
+      "format": "EPUB",
+      "file": "/samples/window-notes.epub",
+      "license": "项目原创示例，允许学习、修改与演示；AI 辅助生成"
+    },
+    {
+      "id": "reading-guide",
+      "title": "阅读器使用手册",
+      "author": "悦读轻阅创作组",
+      "category": "使用指南",
+      "description": "PDF 示例：查看原版页面，演示逐页渲染和页码恢复。",
+      "format": "PDF",
+      "file": "/samples/reading-guide.pdf",
+      "license": "项目原创示例，允许学习、修改与演示；AI 辅助生成"
+    }
+  ]
+}
