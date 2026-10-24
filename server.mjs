@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {randomBytes,randomUUID,createHash,scrypt as scryptCallback,timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
 import {DatabaseSync} from 'node:sqlite';
+import {AgentController} from './agent-controller.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url)), scrypt=promisify(scryptCallback);
 const port=Number(process.env.PORT||4173), host=process.env.HOST||'127.0.0.1';
 const data=process.env.DATA_DIR||path.join(root,'data');
@@ -54,6 +55,24 @@ async function modelAnswer(question,sources){
     return answer.slice(0,1000);
   }catch(error){if(error.name==='AbortError'){aiStats.failures++;aiStats.lastResult='请求超时';await saveAiStats();fail(504,'模型服务响应超时');}if(aiStats.lastResult==='正在调用模型'){aiStats.failures++;aiStats.lastResult='请求异常';await saveAiStats();}throw error;}finally{clearTimeout(timer);}
 }
+async function agentModel(request){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+  aiStats.requests++;aiStats.lastAt=Date.now();aiStats.lastResult='Agent 正在调用模型';await saveAiStats();
+  let recorded=false;
+  try{
+    const response=await fetch(aiConfig.url,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json','Authorization':`Bearer ${aiConfig.key}`},body:JSON.stringify({model:aiConfig.model,...request})});
+    if(!response.ok){recorded=true;aiStats.failures++;aiStats.lastResult=`Agent 请求失败（HTTP ${response.status}）`;await saveAiStats();fail(502,`模型服务请求失败（HTTP ${response.status}）`);}
+    const payload=await response.json();
+    if(!Array.isArray(payload.output)){recorded=true;aiStats.failures++;aiStats.lastResult='Agent 模型返回格式无效';await saveAiStats();fail(502,'模型服务未返回可用的工具或回答');}
+    recorded=true;aiStats.successes++;aiStats.lastResult=payload.output.some(item=>item.type==='function_call')?'Agent 工具调用成功':'Agent 回答成功';await saveAiStats();
+    return payload;
+  }catch(error){
+    if(!recorded){aiStats.failures++;aiStats.lastResult=error.name==='AbortError'?'Agent 请求超时':'Agent 请求异常';await saveAiStats();}
+    if(error.name==='AbortError')fail(504,'模型服务响应超时');
+    throw error;
+  }finally{clearTimeout(timer);}
+}
+const agent=new AgentController(agentModel);
 function validState(s){if(!s||typeof s!=='object'||!Number.isSafeInteger(s.chapter)||s.chapter<0||!Number.isSafeInteger(s.offset)||s.offset<0||typeof s.progress!=='number'||s.progress<0||s.progress>1||!Array.isArray(s.bookmarks)||!Array.isArray(s.notes)||s.bookmarks.length>1000||s.notes.length>1000)return false;return [...s.bookmarks,...s.notes].every(x=>x&&typeof x.id==='string'&&x.id.length<=100&&Number.isSafeInteger(x.chapter)&&x.chapter>=0&&Number.isSafeInteger(x.offset)&&x.offset>=0&&(!x.text||typeof x.text==='string'&&x.text.length<=10000)&&(!x.quote||typeof x.quote==='string'&&x.quote.length<=2000));}
 const server=http.createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
@@ -71,6 +90,16 @@ const server=http.createServer(async(req,res)=>{
       if(url.pathname==='/api/catalog'&&req.method==='GET')return json(res,200,JSON.parse(await readFile(path.join(root,'catalog.json'),'utf8')));
       if(url.pathname==='/api/me'&&req.method==='GET')return json(res,200,{user:me||null});
       if(url.pathname==='/api/assistant/status'&&req.method==='GET')return json(res,200,{configured:Boolean(aiConfig.key),provider:aiProvider,model:aiConfig.model,stats:aiStats});
+      if(url.pathname==='/api/assistant/agent/start'&&req.method==='POST'){
+        const p=await body(req);
+        if(!aiConfig.key)return json(res,200,{mode:'local',answer:null});
+        return json(res,200,await agent.start({question:p.question,bookId:p.bookId,bookTitle:p.bookTitle,chapterCount:p.chapterCount,owner:me?.id||null}));
+      }
+      if(url.pathname==='/api/assistant/agent/continue'&&req.method==='POST'){
+        const p=await body(req);
+        if(!aiConfig.key)fail(400,'尚未配置模型');
+        return json(res,200,await agent.continue({turnId:p.turnId,bookId:p.bookId,results:p.results,owner:me?.id||null}));
+      }
       if(url.pathname==='/api/assistant/answer'&&req.method==='POST'){
         const p=await body(req),question=String(p.question||'').trim();
         if(!question||question.length>300)fail(400,'问题需要是 1–300 个字符');

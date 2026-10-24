@@ -21,7 +21,7 @@ Windows：
 - 本地书架搜索、分类、排序、元数据编辑；阅读设置、目录、书签、摘录高亮、笔记、书内搜索及阅读统计。
 - IndexedDB 保存书籍与阅读记录，Service Worker 缓存离线页面；JSON 备份与恢复。
 - 邮箱注册与密码登录，以及同一服务端上的进度、书签和笔记同步；冲突时由用户选择保留版本。
-- AI 阅读助手检索当前 TXT/EPUB 书籍的所有章节并展示引用依据；书内没有依据时拒答。PDF 暂不支持文本问答。
+- 书内 AI Agent 可按问题查章节目录、搜索全书、读取原文上下文，展示查阅过程和可点击的引用依据；书内没有依据时拒答。每个问题最多查阅 7 轮、调用 14 次只读工具，再生成最终回答。PDF 暂不支持文本问答。
 
 ## 可选的模型 API
 
@@ -33,6 +33,8 @@ Windows：
 
 项目无需前端构建。`server.mjs` 提供本地接口和静态文件；`app/` 包含阅读界面、解析器、存储与离线缓存；`schema.sql` 定义数据库；`samples/` 包含演示书籍与测试样本。
 
-在项目目录运行 `npm test`，或运行 `node --test tests/server.test.mjs tests/assistant.test.mjs`。浏览器测试另需 Playwright 与 Microsoft Edge，详见 [tests/README.md](tests/README.md)。
+在项目目录运行 `npm test`，覆盖服务端、本地检索和 Agent 控制器。浏览器测试另需 Playwright 与 Microsoft Edge，详见 [tests/README.md](tests/README.md)。
+
+仓库包含完整应用源码、启动脚本、配置模板、示例书籍和测试。`Start.bat` 优先使用本地 `runtime/node.exe`，仓库版没有该文件时使用电脑已安装的 Node.js 24+；如未安装，先安装 Node.js 并重新打开终端或文件夹。私密的 `config/ai-config.json`、数据库和个人阅读数据不会提交。
 
 本仓库不含运行时、录屏、课程报告、个人阅读数据和本机模型配置。第三方静态依赖及许可说明见 [THIRD-PARTY.md](THIRD-PARTY.md)。

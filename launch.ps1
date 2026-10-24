@@ -7,12 +7,14 @@ try { $health = Invoke-RestMethod "$appUrl/api/health" -TimeoutSec 2; $running =
 if (-not $running) {
     $nodePath = Join-Path $appRoot 'runtime\node.exe'
     if (-not (Test-Path -LiteralPath $nodePath)) {
-        $nodeCommand = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue
-        if (-not $nodeCommand) { throw 'Node.js 24 or later is required. Install it and make sure node.exe is on PATH.' }
-        $nodePath = $nodeCommand.Source
+        $systemNode = Get-Command node.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $systemNode) { throw 'Node.js 24+ is required. Install Node.js and reopen this folder before running Start.bat.' }
+        $nodePath = $systemNode.Source
     }
-    $nodeMajor = [int]((& $nodePath --version).TrimStart('v').Split('.')[0])
-    if ($nodeMajor -lt 24) { throw 'Node.js 24 or later is required.' }
+    $nodeVersion = & $nodePath --version
+    if ($LASTEXITCODE -ne 0 -or $nodeVersion -notmatch '^v(\d+)\.' -or [int]$Matches[1] -lt 24) {
+        throw 'Node.js 24 or newer is required to run ReadEase.'
+    }
     $dataPath = Join-Path $appRoot 'data'
     New-Item -ItemType Directory -Force -Path $dataPath | Out-Null
     $serverPath = Join-Path $appRoot 'server.mjs'

@@ -29,7 +29,9 @@ function keywords(question){
     return out;
   });
   const aliases=synonymGroups.filter(group=>group.some(term=>question.includes(term))).flat();
-  return [...new Set([...latin,...chinese,...aliases])].filter(x=>!stopWords.has(x)).slice(0,32);
+  const shiftCues=/改变主意|改了主意|改变想法|转变看法|改变决定/.test(question)
+    ?['一直以为','原以为','原本','先前','后来','如今','改为','转而','决定','反而']:[];
+  return [...new Set([...latin,...chinese,...aliases,...shiftCues])].filter(x=>!stopWords.has(x)).slice(0,32);
 }
 
 function segments(chapter,chapterIndex){
@@ -56,6 +58,15 @@ export function findEvidence(book,question,limit=3){
   const all=book.chapters.flatMap((chapter,index)=>segments(chapter,index).map(item=>({
     ...item,title:chapter.title,score:0
   }))).filter(item=>target===null||item.chapter===target);
+  const overview=target===null&&/(这本书|这部书|整本书|全书|主要讲|主要内容|故事梗概|概括|总结)/.test(question)
+    &&/(主要|讲|内容|故事|概括|总结|梗概)/.test(question);
+  if(overview){
+    const seen=new Set(),chapterStarts=all.filter(item=>{
+      if(item.text.trim().length<40||seen.has(item.chapter))return false;
+      seen.add(item.chapter);return true;
+    });
+    if(chapterStarts.length)return sampleAcross(chapterStarts,limit);
+  }
   const frequency=new Map(terms.map(term=>[term,all.filter(item=>item.text.toLowerCase().includes(term.toLowerCase())).length]));
   for(const item of all){
     const lower=item.text.toLowerCase();
@@ -78,7 +89,7 @@ export function findEvidence(book,question,limit=3){
   // keyword with the question. Send excerpts from across that chapter and let
   // the model say that the evidence is insufficient when appropriate.
   if(target!==null)return sampleAcross(all,limit);
-  // Whole-book summary questions draw short passages across the book.
+  // Broad questions without specific terms still draw short passages across the book.
   if(!terms.length&&/这本书|这部书|整本书|全书/.test(question))return sampleAcross(all.filter((item,index)=>index===all.findIndex(x=>x.chapter===item.chapter)),limit);
   return [];
 }

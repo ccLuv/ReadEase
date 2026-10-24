@@ -64,3 +64,13 @@ test('真实示例书的人物问题命中，书外问题仍被拒绝',async()=>
   assert.ok(findEvidence({chapters},'遥是谁？',12).some(item=>item.text.includes('引路人')));
   assert.deepEqual(findEvidence({chapters},'今天的股票价格是多少？',12),[]);
 });
+
+test('全书概括检索覆盖多个章节而非只取一个关键词命中',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const {splitText}=await import('../app/parsers.js');
+  const chapters=splitText(await readFile(new URL('../samples/雾港钟表店.txt',import.meta.url),'utf8'));
+  const evidence=findEvidence({chapters},'这本书主要讲了些什么？',8);
+  assert.ok(new Set(evidence.map(item=>item.chapter)).size>=5);
+  assert.ok(evidence.some(item=>item.title.startsWith('第五章')));
+  assert.ok(evidence.every(item=>item.text.trim().length>=40));
+});
